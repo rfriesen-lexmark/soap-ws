@@ -18,11 +18,12 @@
  */
 package org.reficio.ws.builder;
 
-import org.reficio.ws.SoapContext;
+import java.util.List;
 
 import javax.wsdl.Binding;
 import javax.xml.namespace.QName;
-import java.util.List;
+
+import org.reficio.ws.SoapContext;
 
 /**
  * @author Tom Bujok
@@ -38,9 +39,9 @@ public interface SoapBuilder {
 
     SoapOperationBuilder getOperationBuilder(SoapOperation operation);
 
-    String buildInputMessage(SoapOperation operation);
+    String buildInputMessage(SoapOperation operation, Object[] data);
 
-    String buildInputMessage(SoapOperation operation, SoapContext context);
+    String buildInputMessage(SoapOperation operation, SoapContext context, Object[] data);
 
     String buildOutputMessage(SoapOperation operation);
 

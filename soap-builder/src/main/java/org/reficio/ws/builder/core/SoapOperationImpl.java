@@ -18,14 +18,14 @@
  */
 package org.reficio.ws.builder.core;
 
+import javax.wsdl.Binding;
+import javax.wsdl.BindingOperation;
+import javax.xml.namespace.QName;
+
 import org.reficio.ws.SoapContext;
 import org.reficio.ws.builder.SoapBuilder;
 import org.reficio.ws.builder.SoapOperation;
 import org.reficio.ws.builder.SoapOperationBuilder;
-
-import javax.wsdl.Binding;
-import javax.wsdl.BindingOperation;
-import javax.xml.namespace.QName;
 
 /**
  * @author Tom Bujok
@@ -117,12 +117,12 @@ class SoapOperationImpl implements SoapOperation, SoapOperationBuilder {
 
     @Override
     public String buildInputMessage() {
-        return builder.buildInputMessage(this, context);
+        return builder.buildInputMessage(this, context, null);
     }
 
     @Override
     public String buildInputMessage(SoapContext context) {
-        return builder.buildInputMessage(this, context);
+        return builder.buildInputMessage(this, context, null);
     }
 
     @Override

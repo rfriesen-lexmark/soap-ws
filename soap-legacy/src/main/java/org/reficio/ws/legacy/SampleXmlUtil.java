@@ -18,19 +18,50 @@
  */
 package org.reficio.ws.legacy;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import javax.xml.namespace.QName;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.xmlbeans.*;
+import org.apache.xmlbeans.GDate;
+import org.apache.xmlbeans.GDateBuilder;
+import org.apache.xmlbeans.GDuration;
+import org.apache.xmlbeans.GDurationBuilder;
+import org.apache.xmlbeans.SchemaLocalElement;
+import org.apache.xmlbeans.SchemaParticle;
+import org.apache.xmlbeans.SchemaProperty;
+import org.apache.xmlbeans.SchemaType;
+import org.apache.xmlbeans.SimpleValue;
+import org.apache.xmlbeans.XmlAnySimpleType;
+import org.apache.xmlbeans.XmlCursor;
+import org.apache.xmlbeans.XmlDate;
+import org.apache.xmlbeans.XmlDateTime;
+import org.apache.xmlbeans.XmlDecimal;
+import org.apache.xmlbeans.XmlDuration;
+import org.apache.xmlbeans.XmlGDay;
+import org.apache.xmlbeans.XmlGMonth;
+import org.apache.xmlbeans.XmlGMonthDay;
+import org.apache.xmlbeans.XmlGYear;
+import org.apache.xmlbeans.XmlGYearMonth;
+import org.apache.xmlbeans.XmlInteger;
+import org.apache.xmlbeans.XmlObject;
+import org.apache.xmlbeans.XmlOptions;
+import org.apache.xmlbeans.XmlTime;
 import org.apache.xmlbeans.impl.util.Base64;
 import org.apache.xmlbeans.impl.util.HexBin;
 import org.apache.xmlbeans.soap.SOAPArrayType;
 import org.apache.xmlbeans.soap.SchemaWSDLArrayType;
 import org.reficio.ws.SoapContext;
 import org.reficio.ws.SoapMultiValuesProvider;
-
-import javax.xml.namespace.QName;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.*;
 
 /**
  * This class was extracted from the soapUI code base by centeractive ag in October 2011.
@@ -100,7 +131,7 @@ class SampleXmlUtil {
         cursor.toNextToken();
         // Using the type and the cursor, call the utility method to get a
         // sample XML payload for that Schema element
-        createSampleForType(sType, cursor);
+        createSampleForType(sType, cursor, null);
         // Cursor now contains the sample payload
         // Pretty print the result. Note that the cursor is positioned at the
         // end of the doc so we use the original xml object that the cursor was
@@ -123,7 +154,8 @@ class SampleXmlUtil {
      * Cursor position Before: <theElement>^</theElement> After:
      * <theElement><lots of stuff/>^</theElement>
      */
-    public void createSampleForType(SchemaType stype, XmlCursor xmlc) {
+    public void createSampleForType(SchemaType stype, XmlCursor xmlc, Object data)
+    {
         QName nm = stype.getName();
         if (nm == null && stype.getContainerField() != null)
             nm = stype.getContainerField().getName();
@@ -141,7 +173,7 @@ class SampleXmlUtil {
 
         try {
             if (stype.isSimpleType() || stype.isURType()) {
-                processSimpleType(stype, xmlc);
+                processSimpleType(stype, xmlc, data);
                 return;
             }
 
@@ -156,19 +188,19 @@ class SampleXmlUtil {
                     // noop
                     break;
                 case SchemaType.SIMPLE_CONTENT: {
-                    processSimpleType(stype, xmlc);
+                    processSimpleType(stype, xmlc, data);
                 }
                 break;
                 case SchemaType.MIXED_CONTENT:
                     xmlc.insertChars(pick(WORDS) + " ");
                     if (stype.getContentModel() != null) {
-                        processParticle(stype.getContentModel(), xmlc, true);
+                        processParticle(stype.getContentModel(), xmlc, true, data);
                     }
                     xmlc.insertChars(pick(WORDS));
                     break;
                 case SchemaType.ELEMENT_CONTENT:
                     if (stype.getContentModel() != null) {
-                        processParticle(stype.getContentModel(), xmlc, false);
+                        processParticle(stype.getContentModel(), xmlc, false, data);
                     }
                     break;
             }
@@ -177,7 +209,8 @@ class SampleXmlUtil {
         }
     }
 
-    private void processSimpleType(SchemaType stype, XmlCursor xmlc) {
+    private void processSimpleType(SchemaType stype, XmlCursor xmlc, Object data)
+    {
         if (soapEnc) {
             QName typeName = stype.getName();
             if (typeName != null) {
@@ -185,11 +218,20 @@ class SampleXmlUtil {
             }
         }
 
-        String sample = sampleDataForSimpleType(stype);
+        String sample = null;
+        if (data != null)
+        {
+            sample = data.toString();
+        }
+        else
+        {
+            sample = sampleDataForSimpleType(stype);
+        }
         xmlc.insertChars(sample);
     }
 
-    private String sampleDataForSimpleType(SchemaType sType) {
+    private String sampleDataForSimpleType(SchemaType sType)
+    {
         // swaRef
         if (sType.getName() != null) {
             if (sType.getName().equals(new QName("http://ws-i.org/profiles/basic/1.1/xsd", "swaRef")))
@@ -899,13 +941,39 @@ class SampleXmlUtil {
      * Cursor position: Before this call: <outer><foo/>^</outer> (cursor at the
      * ^) After this call: <<outer><foo/><bar/>som text<etc/>^</outer>
      */
-    private void processParticle(SchemaParticle sp, XmlCursor xmlc, boolean mixed) {
-        int loop = determineMinMaxForSample(sp, xmlc);
+    private void processParticle(SchemaParticle sp, XmlCursor xmlc, boolean mixed, Object data)
+    {
+        Object subData = null;
+        if (data != null)
+        {
+            if (!(data instanceof Map<?, ?>))
+            {
+                boolean shouldntBeHere = true;
+            }
+            Map<String, Object> dataMap = (Map<String, Object>) data;
+            subData = dataMap.get(sp.getName().getLocalPart());
+        }
 
-        while (loop-- > 0) {
+        int loop = determineMinMaxForSample(sp, xmlc, subData);
+
+        int idx = 0;
+        while (idx < loop)
+        {
             switch (sp.getParticleType()) {
                 case (SchemaParticle.ELEMENT):
-                    processElement(sp, xmlc, mixed);
+                {
+                    Object elementData = subData;
+                    if (subData != null)
+                    {
+                        if (subData instanceof Object[])
+                        {
+                            Object[] dataArray = (Object[]) subData;
+                            elementData = dataArray[idx];
+                        }
+                    }
+
+                    processElement(sp, xmlc, mixed, elementData);
+                }
                     break;
                 case (SchemaParticle.SEQUENCE):
                     processSequence(sp, xmlc, mixed);
@@ -923,10 +991,21 @@ class SampleXmlUtil {
                     // throw new Exception("No Match on Schema Particle Type: " +
                     // String.valueOf(sp.getParticleType()));
             }
+            idx++;
         }
     }
 
-    private int determineMinMaxForSample(SchemaParticle sp, XmlCursor xmlc) {
+    private int determineMinMaxForSample(SchemaParticle sp, XmlCursor xmlc, Object data)
+    {
+        if (data != null)
+        {
+            if (data instanceof Object[])
+            {
+                Object[] dataArray = (Object[]) data;
+                return dataArray.length;
+            }
+        }
+
         int minOccurs = sp.getIntMinOccurs();
         int maxOccurs = sp.getIntMaxOccurs();
 
@@ -980,7 +1059,8 @@ class SampleXmlUtil {
         return elementOrTypeName;
     }
 
-    private void processElement(SchemaParticle sp, XmlCursor xmlc, boolean mixed) {
+    private void processElement(SchemaParticle sp, XmlCursor xmlc, boolean mixed, Object data)
+    {
         // cast as schema local element
         SchemaLocalElement element = (SchemaLocalElement) sp;
 
@@ -1009,7 +1089,7 @@ class SampleXmlUtil {
         else if (sp.isDefault())
             xmlc.insertChars(sp.getDefaultText());
         else
-            createSampleForType(element.getType(), xmlc);
+            createSampleForType(element.getType(), xmlc, data);
         // -> <elem>stuff</elem>^
         xmlc.toNextToken();
     }
@@ -1098,7 +1178,7 @@ class SampleXmlUtil {
         SchemaParticle[] spc = sp.getParticleChildren();
         for (int i = 0; i < spc.length; i++) {
             // / <parent>maybestuff^</parent>
-            processParticle(spc[i], xmlc, mixed);
+            processParticle(spc[i], xmlc, mixed, null);
             // <parent>maybestuff...morestuff^</parent>
             if (mixed && i < spc.length - 1)
                 xmlc.insertChars(pick(WORDS));
@@ -1111,7 +1191,7 @@ class SampleXmlUtil {
             xmlc.insertComment("You have a CHOICE of the next " + String.valueOf(spc.length) + " items at this level");
 
         for (int i = 0; i < spc.length; i++) {
-            processParticle(spc[i], xmlc, mixed);
+            processParticle(spc[i], xmlc, mixed, null);
         }
     }
 
@@ -1121,7 +1201,7 @@ class SampleXmlUtil {
             xmlc.insertComment("You may enter the following " + String.valueOf(spc.length) + " items in any order");
 
         for (int i = 0; i < spc.length; i++) {
-            processParticle(spc[i], xmlc, mixed);
+            processParticle(spc[i], xmlc, mixed, null);
             if (mixed && i < spc.length - 1)
                 xmlc.insertChars(pick(WORDS));
         }

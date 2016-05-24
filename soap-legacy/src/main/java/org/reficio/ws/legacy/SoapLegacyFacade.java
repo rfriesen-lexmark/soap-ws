@@ -18,18 +18,23 @@
  */
 package org.reficio.ws.legacy;
 
-import org.reficio.ws.SoapBuilderException;
-import org.reficio.ws.SoapContext;
-import org.reficio.ws.SoapValidationException;
-
-import javax.wsdl.*;
-import javax.wsdl.extensions.soap.SOAPBinding;
-import javax.wsdl.extensions.soap12.SOAP12Binding;
-import javax.xml.namespace.QName;
 import java.io.File;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
+
+import javax.wsdl.Binding;
+import javax.wsdl.BindingOperation;
+import javax.wsdl.Port;
+import javax.wsdl.Service;
+import javax.wsdl.WSDLException;
+import javax.wsdl.extensions.soap.SOAPBinding;
+import javax.wsdl.extensions.soap12.SOAP12Binding;
+import javax.xml.namespace.QName;
+
+import org.reficio.ws.SoapBuilderException;
+import org.reficio.ws.SoapContext;
+import org.reficio.ws.SoapValidationException;
 
 /**
  * @author Tom Bujok
@@ -47,9 +52,10 @@ public class SoapLegacyFacade {
         this.messageBuilder = new SoapMessageBuilder(wsdlUrl);
     }
 
-    public String buildSoapMessageFromInput(Binding binding, BindingOperation bindingOperation, SoapContext context) {
+    public String buildSoapMessageFromInput(Binding binding, BindingOperation bindingOperation, SoapContext context, Object[] data)
+    {
         try {
-            return messageBuilder.buildSoapMessageFromInput(binding, bindingOperation, context);
+            return messageBuilder.buildSoapMessageFromInput(binding, bindingOperation, context, data);
         } catch (Exception e) {
             throw new SoapBuilderException(e);
         }

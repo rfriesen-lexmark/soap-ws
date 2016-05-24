@@ -18,7 +18,18 @@
  */
 package org.reficio.ws.builder;
 
-import com.ibm.wsdl.xml.WSDLReaderImpl;
+import static junit.framework.Assert.assertTrue;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+
+import javax.wsdl.Definition;
+import javax.wsdl.WSDLException;
+import javax.wsdl.xml.WSDLReader;
+import javax.xml.namespace.QName;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.custommonkey.xmlunit.XMLUnit;
@@ -28,16 +39,7 @@ import org.reficio.ws.builder.core.Wsdl;
 import org.reficio.ws.common.ResourceUtils;
 import org.reficio.ws.common.XmlUtils;
 
-import javax.wsdl.Definition;
-import javax.wsdl.WSDLException;
-import javax.wsdl.xml.WSDLReader;
-import javax.xml.namespace.QName;
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
-
-import static junit.framework.Assert.assertTrue;
+import com.ibm.wsdl.xml.WSDLReaderImpl;
 
 /**
  * User: Tom Bujok (tom.bujok@gmail.com)
@@ -105,7 +107,7 @@ public class ServiceComplianceTest {
             String bindingName = bindingQName.getLocalPart();
             SoapBuilder builder = parser.binding().name(bindingQName).find();
             for (SoapOperation operation : builder.getOperations()) {
-                String request = builder.buildInputMessage(operation);
+                String request = builder.buildInputMessage(operation, null);
                 String expectedRequest = getExpectedRequest(testServiceId, bindingName, operation.getOperationName());
                 log.info(String.format("Comparing binding=[%s] operation=[%s]", bindingName, operation.getOperationName()));
                 log.info("REQUEST:\n" + request);
